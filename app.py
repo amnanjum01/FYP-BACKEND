@@ -5,8 +5,9 @@ from ultralytics import YOLO
 import numpy as np
 from classificationClasses.ClothClasses import ClothClasses
 app = Flask(__name__)
-predictionModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\clothing_items.pt')
+predictionModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothing_items.pt')
 #only one instance of cloth class
+# https://console.firebase.google.com/u/1/project/fyp-data-bagsearch/database/fyp-data-bagsearch-default-rtdb/data/~2F
 clothClasses = ClothClasses()
 
 @app.route("/detect", methods=["POST"])
