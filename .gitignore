@@ -1,1 +1,3 @@
 .venv/
+bagsearch-firebase.json
+__pycache__/
