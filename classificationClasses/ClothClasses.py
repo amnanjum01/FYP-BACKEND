@@ -1,4 +1,6 @@
-class ClothClasses:
+from .ModelClasses import ModelClasses
+
+class ClothClasses(ModelClasses):
     #class variables
     classLabelsDict = {
         0: "m-button-down",

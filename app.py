@@ -28,7 +28,9 @@ db = firestore.client()
 ibed = imgbeddings()
 
 app = Flask(__name__)
-predictionModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothing_items.pt')
+clothingModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothing_items.pt')
+jewerlyModel = YOLO(r"C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\jewelry_items.pt")
+shoeModel = YOLO(r"C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\shoes_items.pt")
 
 clothClasses = ClothClasses()
 
@@ -39,8 +41,8 @@ def detectClothingItem():
         imageInput2 = Image.open(BytesIO(imageInput.read()))
         imageEmbedding = ibed.to_embeddings(imageInput2)
         arr_list = imageEmbedding.tolist() #embedding. To return, type arr = arr_arr_list
-        predictionResult = predictionModel(imageInput2)
-        inferences = predictionResult[0].boxes.data.numpy()
+        predictionResultClothes = clothingModel(imageInput2)
+        inferences = predictionResultClothes[0].boxes.data.numpy()
         val = []
         for inference in inferences:
             val.append(inference[5])
