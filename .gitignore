@@ -3,3 +3,4 @@ bagsearch-firebase.json
 **/__pycache__/     
 .vscode/
 project_secrets.py
+db.py
