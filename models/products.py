@@ -7,7 +7,8 @@ products = {
             "description",
             "label",
             "vector",
-            "imagePath"
+            "imagePath",
+            "category"
         ],
         "properties":{
             "productName":{"bsonType":"string"},
@@ -19,12 +20,12 @@ products = {
             "shares":{"bsonType":"int"},
             "sizes": {
                 "bsonType": "array",
-                    "items": {
+                "items": {
                     "bsonType": "object",
-                    "required": ["string", "quantity"],
+                    "required": ["sizeVal", "quantity"],
                     "properties": {
                         "sizeVal": {"bsonType": "string"},
-                        "quantity": {"bsonType":"int"}
+                        "quantity": {"bsonType": "int"}
                     }
                 }
             },
@@ -56,7 +57,8 @@ products = {
                 "items":{
                     "bsonType": "string"
                 }
-            }
+            },
+            "category":{"bsonType":"string"}
 
         }
     }

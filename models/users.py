@@ -1,63 +1,35 @@
-{
-    "$jsonSchema": {
-      "required": [
-        "productName",
-        "sku",
-        "priceOfProduct",
-        "description",
-        "label",
-        "vector",
-        "imagePath"
-      ],
-      "properties": {
-        "productName": { "bsonType": "string" },
-        "sku": { "bsonType": "string" },
-        "priceOfProduct": { "bsonType": "int" },
-        "description": { "bsonType": "string" },
-        "label": { "bsonType": "string" },
-        "vector": { "bsonType": "string" },
-        "likes": { "bsonType": "int" },
-        "shares": { "bsonType": "int" },
-        "sizes": {
-          "bsonType": "array",
-          "items": {
-            "bsonType": "object",
-            "required": ["size", "quantity"],
-            "properties": {
-              "size": { "bsonType": "string" },
-              "quantity": { "bsonType": "int" }
-            }
-          }
-        },
-        "imagePath": {
-          "bsonType": "array",
-          "items": {
-            "bsonType": "object",
-            "required": ["imgUrl", "imgPath"],
-            "properties": {
-              "imgUrl": { "bsonType": "string" },
-              "imgPath": { "bsonType": "string" }
-            }
-          }
-        },
-        "reviews": {
-          "bsonType": "array",
-          "items": {
-            "bsonType": "object",
-            "required": ["rating", "reviewText"],
-            "properties": {
-              "rating": { "bsonType": "int" },
-              "reviewText": { "bsonType": "string" }
-            }
-          }
-        },
-        "tags": {
-          "bsonType": "array",
-          "items": {
-            "bsonType": "string"
-          }
+users = {
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["userId", "username", "password", "email", "firstName", "lastName", "address", "phoneNumber"],
+    "properties": {
+      "userId": { "bsonType": "string" },
+      "username": { "bsonType": "string" },
+      "password": {
+        "bsonType": "string",
+        "minLength": 6
+      },
+      "email": {
+        "bsonType": "string",
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      },
+      "firstName": { "bsonType": "string" },
+      "lastName": { "bsonType": "string" },
+      "address": {
+        "bsonType": "object",
+        "required": ["street", "city", "state", "country", "zip"],
+        "properties": {
+          "street": { "bsonType": "string" },
+          "city": { "bsonType": "string" },
+          "state": { "bsonType": "string" },
+          "country": { "bsonType": "string" },
+          "zip": { "bsonType": "string" }
         }
+      },
+      "phoneNumber": {
+        "bsonType": "string",
+        "pattern": "^\\(\\+92\\)\\s3[0-9]{2}\\s[0-9]{7}$"
       }
     }
   }
-  
+}

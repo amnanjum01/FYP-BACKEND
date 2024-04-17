@@ -1,0 +1,42 @@
+orders = {
+  "$jsonSchema":{
+    "required":[
+      "orderId",
+      "userId",
+      "products",
+      "totalPrice",
+      "orderDate",
+      "status"
+    ],
+    "properties":{
+      "orderId":{
+        "bsonType":"string"
+      },
+      "userId":{
+        "bsonType":"string"
+      },
+      "products":{
+        "bsonType":"array",
+        "items":{
+          "bsonType":"object",
+          "required":["productName", "sku", "quantity", "price"],
+          "properties":{
+            "productName":{"bsonType":"string"},
+            "sku":{"bsonType":"string"},
+            "quantity":{"bsonType":"int"},
+            "price":{"bsonType":"int"}
+          }
+        }
+      },
+      "totalPrice":{
+        "bsonType":"int"
+      },
+      "orderDate":{
+        "bsonType":"date"
+      },
+      "status":{
+        "bsonType":"string"
+      }
+    }
+  }
+}

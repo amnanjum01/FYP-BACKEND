@@ -4,3 +4,4 @@ bagsearch-firebase.json
 .vscode/
 project_secrets.py
 db.py
+dump.txt
