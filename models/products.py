@@ -8,7 +8,8 @@ products = {
             "label",
             "vector",
             "imagePath",
-            "category"
+            "category",
+            "quantity"
         ],
         "properties":{
             "productName":{"bsonType":"string"},
@@ -58,7 +59,8 @@ products = {
                     "bsonType": "string"
                 }
             },
-            "category":{"bsonType":"string"}
+            "category":{"bsonType":"string"},
+            "quantity":{"bsonType":"int"}
 
         }
     }
