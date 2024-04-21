@@ -213,7 +213,8 @@ def rateProduct(id):
 
 @app.route("/products/detect", methods=["POST"])
 def productsDetect():
-    if request.method == 'POST':
+    try:
+      if request.method == 'POST':
         imageInput = request.files["image"]
         imageInput2 = Image.open(BytesIO(imageInput.read()))
         imageEmbedding = ibed.to_embeddings(imageInput2)
@@ -250,6 +251,8 @@ def productsDetect():
         
         data = resultsStringIdConverter(finalResultSorted)
         return jsonify(data)
+    except Exception as e:
+      return jsonify({"message : ", str(e)})
       
 @app.route("/orders/create-order", methods=["POST"])
 def createOrder():
