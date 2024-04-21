@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify
-from project_secrets import MONGODB_ATLAS_URI
+from flask_cors import CORS
+from flask_bcrypt import Bcrypt
+from flask_bcrypt import check_password_hash
+from project_secrets import MONGODB_ATLAS_URI, JWT_SECRET
 from io import BytesIO
 from PIL import Image
 from ultralytics import YOLO
@@ -13,8 +16,12 @@ import string
 
 #date time
 from datetime import datetime
-from bson import ObjectId
-from bson import json_util
+
+#jwt web token for authentication of the app
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
 
 #schemas
 from models.products import products
@@ -29,34 +36,29 @@ from flask_pymongo import PyMongo
 from pymongo.errors import CollectionInvalid
 from pymongo import DESCENDING
 
-#imports for the database
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
-from firebase_admin import db
-
-#fetching service account key content
-cred = credentials.Certificate('bagsearch-firebase.json')
-
-#initialize the application
-firebase_admin.initialize_app(cred)
-
-#firestore client
-db = firestore.client()
-
 #image imbedding object 
 ibed = imgbeddings()
 
+#repititive functions import
+from Functions import embeddingComparerAndSort, cursorConverter, resultsStringIdConverter
+
 app = Flask(__name__)
+CORS(app)
+bcrypt = Bcrypt(app)
+
+#config of jwt token done here
+app.config["JWT_SECRET_KEY"] = JWT_SECRET
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400
+jwt = JWTManager(app)
 
 #config of db is done here
 app.config["MONGO_URI"] = MONGODB_ATLAS_URI
 mongo = PyMongo(app) 
 
 #models to be used
-clothingModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothing_items.pt')
-jewerlyModel = YOLO(r"C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\jewelry.pt")
-shoeModel = YOLO(r"C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\shoes_items.pt")
+clothingModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothes_new.pt')
+jewerlyModel = YOLO(r"C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\jewellery_new.pt")
+shoeModel = YOLO(r"C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\shoes_new.pt")
 
 #instances of the model
 clothClasses = ClothClasses()
@@ -90,56 +92,13 @@ def generate_random_string(length):
     letters = string.ascii_letters + string.digits
     return ''.join(random.choice(letters) for _ in range(length))
     
-@app.route("/detect", methods=["POST"])
-def detectClothingItem():
-    if request.method == 'POST':
-        imageInput = request.files["image"]
-        imageInput2 = Image.open(BytesIO(imageInput.read()))
-        imageEmbedding = ibed.to_embeddings(imageInput2)
-        arr_list = imageEmbedding.tolist() #embedding. To return, type arr = arr_arr_list
-        predictionResultClothes = clothingModel(imageInput2)
-        predictionResultJewelry = jewerlyModel(imageInput2)
-        predictionResultShoes = shoeClasses(imageInput2)
-        inferences = predictionResultJewelry[0].boxes.data.numpy()
-        print(inferences)
-        inferences1 = predictionResultClothes[0].boxes.data.numpy()
-        print(inferences1)
-        inferences2 = predictionResultShoes[0].boxes.data.numpy()
-        print(inferences2)
-        val = []
-        for inference in inferences:
-            val.append(inference[5])
-        products_ref = db.collection('products').where('label', 'in', jewelryClasses.getClassLabels(val)).stream()
-        finalResult = []
-        for doc in products_ref:
-            docDict = doc.to_dict()
-            A = np.reshape(np.array(eval(docDict.get("vector"))), (1, 768))
-            cosine_similarity =  np.dot(A, imageEmbedding.T) / (np.linalg.norm(A) * np.linalg.norm(imageEmbedding))
-            docDict["cosineSimilarity"] = cosine_similarity.tolist()
-            finalResult.append(docDict)
-        finalResultSorted = sorted(finalResult, key= lambda d: d['cosineSimilarity'], reverse=True)  # Sort in descending order of cosine similarity
-        retrievedClass = {"hello": finalResultSorted, "hi": inferences1}
-        return jsonify(retrievedClass)
-
-@app.route("/connectmongo", methods=["GET"])
-def getMongoData():
-    try:
-      if request.method == 'GET':
-        mongo.db.Product.insert_one({"a": ']'})
-        data = {"message":"Data Fetched Successfully"}
-        return jsonify(data)
-    except Exception as e:
-      return jsonify({"message : ", str(e)})
 
 @app.route("/products/all-products", methods=["GET"])
 def getProducts():
     try:
       if request.method == "GET":
-        allProducts = mongo.db.Product.find()
-        data = {"products": []}
-        for product in allProducts:
-            product["_id"] = str(product["_id"])  # Convert ObjectId to string
-            data["products"].append(product)
+        allProducts = mongo.db.Products.find()
+        data = resultsStringIdConverter(allProducts)
         return jsonify(data)
     except Exception as e:
       return jsonify({"message : ", str(e)})
@@ -150,10 +109,7 @@ def getProductByCategory(category_name):
   try:
     if request.method == "GET":
         allProducts = mongo.db.Products.find({"category": category_name})
-        data = {"products": []}
-        for product in allProducts:
-            product["_id"] = str(product["_id"])  # Convert ObjectId to string
-            data["products"].append(product)
+        data = resultsStringIdConverter(allProducts)
         return jsonify(data)
   except Exception as e:
       return jsonify({"message : ", str(e)})
@@ -187,10 +143,7 @@ def getProductByLabel(label):
   try:
     if request.method == "GET":
           allProducts = mongo.db.Products.find({"labels":label})
-          data = {"products": []}
-          for product in allProducts:
-              product["_id"] = str(product["_id"])  # Convert ObjectId to string
-              data["products"].append(product)
+          data = resultsStringIdConverter(allProducts)
           return jsonify(data)
   except Exception as e:
     return jsonify({"message : ", str(e)})
@@ -257,6 +210,46 @@ def rateProduct(id):
       return jsonify({"message":"Comment added!"})
   except Exception as e:
     return jsonify({'message :', str(e)})
+
+@app.route("/products/detect", methods=["POST"])
+def productsDetect():
+    if request.method == 'POST':
+        imageInput = request.files["image"]
+        imageInput2 = Image.open(BytesIO(imageInput.read()))
+        imageEmbedding = ibed.to_embeddings(imageInput2)
+        arr_list = imageEmbedding.tolist() 
+        predictionResultClothes = clothingModel(imageInput2)
+        predictionResultJewelry = jewerlyModel(imageInput2)
+        predictionResultShoes = shoeModel(imageInput2)
+        inferences = predictionResultShoes[0].boxes.data.numpy()
+        inferences1 = predictionResultClothes[0].boxes.data.numpy()
+        inferences2 = predictionResultJewelry[0].boxes.data.numpy()
+        
+        last_elements_within = [int(element[-1]) for element in inferences]
+        shoes = ShoesClasses.getClassLabels(last_elements_within)
+        
+        last_elements_within_clothes = [int(element[-1]) for element in inferences1]
+        cloth = ClothClasses.getClassLabels(last_elements_within_clothes)
+        
+        last_elements_within_jewelry = [int(element[-1]) for element in inferences2]
+        jewelry = JewelryClasses.getClassLabels(last_elements_within_jewelry)
+        
+        products_ref = mongo.db.Products.find({"labels":{ "$in": shoes}})
+        products_list_shoes = cursorConverter(cursor=products_ref)
+        finalResultSorted_shoes = embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList= products_list_shoes)
+        
+        products_cloth = mongo.db.Products.find({"labels":{ "$in": cloth}})
+        products_list_cloth = cursorConverter(cursor=products_cloth)
+        finalResultSorted_cloth = embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_cloth)
+        
+        products_jewelry = mongo.db.Products.find({"labels":{ "$in": jewelry}})
+        products_list_jewelry = cursorConverter(cursor=products_jewelry)
+        finalResultSorted_jewelry= embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_jewelry)
+        
+        finalResultSorted = finalResultSorted_cloth + finalResultSorted_jewelry + finalResultSorted_shoes
+        
+        data = resultsStringIdConverter(finalResultSorted)
+        return jsonify(data)
       
 @app.route("/orders/create-order", methods=["POST"])
 def createOrder():
@@ -269,6 +262,15 @@ def createOrder():
                 else:
                     return jsonify({'message': 'userId, products, totalPrice, orderDate, and status are required'})
             newRecord = request.get_json()
+            # for record in newRecord["products"]:
+            #   prod = mongo.db.Products.find_one({"sku":record["sku"]})
+            #   if "size" in record:
+            #     val = 0
+            #     for size in prod["sizes"]:
+            #       if record["size"] == size["sizeVal"]:
+            #         val = size["quantity"]
+            #         break                           
+            #     mongo.db.Products.find_one_and_update({"sku":record["sku"]})
             order_id = newRecord["userId"] + generate_random_string(4)
             newRecord["orderId"] = order_id
             presentDate = newRecord["orderDate"].split('-')
@@ -335,4 +337,46 @@ def markDelivered(id):
         return jsonify({"message":"Cannot be delivered yet. Check present status."})
   except Exception as e:
     return jsonify({"message : ", str(e)})
-#received,(received) dispatched, (received and dispatch = cancelled) , (dispatched) delivered
+  
+@app.route("/users/create-user", methods = ["POST"])
+def createUser():
+  try:
+    if request.method == "POST":
+      user = request.get_json()
+      keys = ["username", "password", "email", "firstName", "lastName","address", "phoneNumber"]
+      for key in keys:
+        if key not in request.get_json():
+          return jsonify ({"Following key is required":"Key missing."}) 
+      addressKeys = ["street", "city", "state", "country", "zip"]
+      for addressKey in addressKeys:
+        if addressKey not in user["address"]:
+          return jsonify({"message":"Following address keys are required: street, city, state, country and zip."})
+      user["userId"] = user["username"] + generate_random_string(7)
+      user["password"] = bcrypt.generate_password_hash(user["password"], rounds=16).decode('utf-8')
+      mongo.db.Users.insert_one(user)
+      message = f"User {user['userId']} created"
+      return jsonify({"message": message})
+  except Exception as e:
+    return jsonify({"message : ", str(e)})
+  
+@app.route("/users/login", methods = ["POST"])
+def userLogin():
+  try:
+    if request.method == "POST":
+      user = request.get_json()
+      keys = ["email","password"]
+      for key in keys:
+        if key not in user:
+          return jsonify({"message":"Need email and password."})
+      exists = mongo.db.Users.find_one({"email":user["email"]})
+      if exists is None:
+        return jsonify({"message":"Wrong email or password."})
+      currPassword = exists["password"].encode('utf-8')
+      if bcrypt.check_password_hash(currPassword, user["password"]) == True:
+        accessToken = create_access_token(identity=user["email"])
+        return jsonify({"message":accessToken})
+      else:
+        return jsonify({"message":"Wrong password."})
+  except Exception as e:
+    return jsonify({"message : ", str(e)})
+        
