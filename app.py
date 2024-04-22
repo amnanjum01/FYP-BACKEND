@@ -31,6 +31,9 @@ from models.orders import orders
 #embeddings generator
 from imgbeddings import imgbeddings
 
+#date parser
+from dateutil import parser
+
 #setting up mongo db
 from flask_pymongo import PyMongo
 from pymongo.errors import CollectionInvalid
@@ -260,28 +263,32 @@ def createOrder():
         if request.method == "POST":
             keys = ["userId", "products", "totalPrice", "orderDate", "status"]
             for key in keys:
-                if key in request.get_json():
-                    continue
-                else:
+                if key not in request.get_json():
                     return jsonify({'message': 'userId, products, totalPrice, orderDate, and status are required'})
             newRecord = request.get_json()
-            # for record in newRecord["products"]:
-            #   prod = mongo.db.Products.find_one({"sku":record["sku"]})
-            #   if "size" in record:
-            #     val = 0
-            #     for size in prod["sizes"]:
-            #       if record["size"] == size["sizeVal"]:
-            #         val = size["quantity"]
-            #         break                           
-            #     mongo.db.Products.find_one_and_update({"sku":record["sku"]})
+            for record in newRecord["products"]:
+              prod = mongo.db.Products.find_one({"sku":record["sku"]})
+              quantity = 0
+              if "size" in record:
+                updated_sizes = []
+                for size in prod['sizes']:
+                    if size['sizeVal'] == record["size"]:
+                      size['quantity'] = size['quantity'] - record["quantity"]
+                      quantity = quantity + record["quantity"]
+                      updatedProductQuantity = prod["quantity"] - quantity
+                    updated_sizes.append(size)
+                mongo.db.Products.update_one({'sku': record["sku"]}, {'$set': {'sizes': updated_sizes, "quantity": updatedProductQuantity}})
+              else:
+                updatedProductQuantityWithoutSize = prod["quantity"]-record["quantity"]
+                mongo.db.Products.update_one({'sku': record["sku"]}, {'$set': {"quantity": updatedProductQuantityWithoutSize}})
             order_id = newRecord["userId"] + generate_random_string(4)
             newRecord["orderId"] = order_id
-            presentDate = newRecord["orderDate"].split('-')
-            newRecord["orderDate"] = datetime(int(presentDate[0]), int(presentDate[1]), int(presentDate[2]))
+            newRecord["orderDate"]=  parser.isoparse(newRecord["orderDate"])
+            print(newRecord["orderDate"])
             mongo.db.Orders.insert_one(newRecord)
-            return jsonify({'message': order_id})
+            return jsonify({'message': newRecord["orderId"]})
     except Exception as e:
-        return jsonify({"message": str(e)})
+        return jsonify({"error message": str(e)})
       
 @app.route("/orders/order-details/<id>", methods = ["GET"])
 def getOrderDetails(id):
