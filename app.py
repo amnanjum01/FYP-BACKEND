@@ -134,7 +134,7 @@ def getProductById(id):
     if request.method == "GET":
         product = mongo.db.Products.find_one({"sku": id})
         if product:
-            product["_id"] = str(product["_id"])  # Convert ObjectId to string
+            product["_id"] = str(product["_id"])  
             return jsonify(product)
         else:
             return jsonify({"message": "Product not found"}), 404
@@ -296,7 +296,7 @@ def getOrderDetails(id):
     if request.method == "GET":
       order = mongo.db.Orders.find_one({"orderId":id})
       if order:
-        order["_id"] = str(order["_id"])  # Convert ObjectId to string
+        order["_id"] = str(order["_id"])  
         return jsonify(order)
       else:
         return jsonify({"message": "Product not found"}), 404
