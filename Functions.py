@@ -1,4 +1,6 @@
 import numpy as np
+import random
+import string
 
 def embeddingComparerAndSort(imageEmbeddings, productList):
     finalResult = []
@@ -20,5 +22,12 @@ def resultsStringIdConverter(cursor):
     data = {"products": []}
     for product in cursor:
         product["_id"] = str(product["_id"])  
+        if "vector" in product:
+            del product["vector"]
         data["products"].append(product)
+        
     return data
+
+def generate_random_string(length):
+    letters = string.ascii_letters + string.digits
+    return ''.join(random.choice(letters) for _ in range(length))
