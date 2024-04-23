@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
+from flask_mail import Mail, Message
 from flask_bcrypt import check_password_hash
-from project_secrets import MONGODB_ATLAS_URI, JWT_SECRET
+from project_secrets import MONGODB_ATLAS_URI, JWT_SECRET, EMAIL_PASSWORD, EMAIL
 from io import BytesIO
 from PIL import Image
 from ultralytics import YOLO
@@ -11,8 +12,7 @@ from numpy.linalg import norm
 from classificationClasses.ClothClasses import ClothClasses
 from classificationClasses.JewelryClasses import JewelryClasses
 from classificationClasses.ShoesClasses import ShoesClasses
-import random
-import string
+
 
 #date time
 from datetime import datetime
@@ -43,7 +43,7 @@ from pymongo import DESCENDING
 ibed = imgbeddings()
 
 #repititive functions import
-from Functions import embeddingComparerAndSort, cursorConverter, resultsStringIdConverter
+from Functions import *
 
 app = Flask(__name__)
 CORS(app)
@@ -57,6 +57,7 @@ jwt = JWTManager(app)
 #config of db is done here
 app.config["MONGO_URI"] = MONGODB_ATLAS_URI
 mongo = PyMongo(app) 
+
 
 #models to be used
 clothingModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothes_new.pt')
@@ -89,11 +90,6 @@ if collection_name not in mongo.db.list_collection_names():
 else:
     print(f"Collection '{collection_name}' already exists.")
     
-
-
-def generate_random_string(length):
-    letters = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters) for _ in range(length))
     
 
 @app.route("/products/all-products", methods=["GET"])
@@ -145,7 +141,7 @@ def getProductById(id):
 def getProductByLabel(label):
   try:
     if request.method == "GET":
-          allProducts = mongo.db.Products.find({"labels":label})
+          allProducts = mongo.db.Products.find({"labels": {"$in": [label]}})
           data = resultsStringIdConverter(allProducts)
           return jsonify(data)
   except Exception as e:
@@ -171,6 +167,20 @@ def updateProductById(id):
   except Exception as e:
     return jsonify({"message : ", str(e)})
       
+@app.route("/products/category-wise-labels/<category>", methods=["GET"])
+def getCategoryWiseLabels(category):
+  try:
+    if request.method == "GET":
+      products = mongo.db.Products.find({"category":category})
+      labels = []
+      for product in products:
+        for label in product["labels"]:
+          if label not in labels:
+            labels.append(label)
+      return jsonify({"Category labels":labels})
+  except Exception as e:
+    return jsonify({"Message":str(e)})
+  
 @app.route("/products/like/<id>", methods = ["PUT"])
 def likeById(id):
   try:
@@ -389,4 +399,25 @@ def userLogin():
         return jsonify({"message":"Wrong password."})
   except Exception as e:
     return jsonify({"message : ", str(e)})
-        
+  
+@app.route("/users/reset-password/<email>", methods = ["PUT"])
+def resetPassword(email):
+  try:
+    if request.method == "PUT":
+      exists = mongo.db.Users.find_one({"email":email})
+      if exists is None:
+        return jsonify({"message":"User does not exists"})
+      else:
+        newPassword = request.get_json()
+        for key in ["newPassword", "confirmedPassword"]:
+          if key not in newPassword:
+            return jsonify({"message":"missing new or confirmed password"})
+        hashedPassword = bcrypt.generate_password_hash(newPassword["newPassword"], rounds=16)
+        if check_password_hash(hashedPassword, newPassword["confirmedPassword"]) != True:
+          return jsonify({"Message":"Passwords don't match."})
+        hashedPassword = hashedPassword.decode('utf-8')
+        mongo.db.Users.find_one_and_update(filter={"email":email}, update={"$set":{"password":hashedPassword}})
+        return jsonify({"Message":"Password updated."})
+  except Exception as e:
+    return jsonify({"Error message : ": str(e)})
+  
