@@ -9,7 +9,8 @@ products = {
             "vector",
             "imagePath",
             "category",
-            "quantity"
+            "quantity", 
+            "brandName"
         ],
         "properties":{
             "productName":{"bsonType":"string"},
@@ -19,6 +20,7 @@ products = {
             "vector":{"bsonType":"string"},
             "likes":{"bsonType":"int"},
             "shares":{"bsonType":"int"},
+            "brandName":{"bsonType":"string"},
             "sizes": {
                 "bsonType": "array",
                 "items": {

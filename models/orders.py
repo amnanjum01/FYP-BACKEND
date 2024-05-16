@@ -25,7 +25,24 @@ orders = {
             "sku":{"bsonType":"string"},
             "quantity":{"bsonType":"int"},
             "price":{"bsonType":"int"},
-            "size":{"bsonType":"string"}
+            "size":{
+              "bsonType":"array",
+              "items":{
+                "bsonType":"object",
+                "required":[
+                  "sizeVal",
+                  "quantity"
+                ],
+                "properties":{
+                  "sizeVal":{
+                    "bsonType":"string"
+                  },
+                  "quantity":{
+                    "bsonType":"int"
+                  }
+                }
+              }
+            }
           }
         }
       },

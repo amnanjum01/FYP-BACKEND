@@ -13,7 +13,6 @@ from classificationClasses.ClothClasses import ClothClasses
 from classificationClasses.JewelryClasses import JewelryClasses
 from classificationClasses.ShoesClasses import ShoesClasses
 
-
 #date time
 from datetime import datetime
 
@@ -57,7 +56,6 @@ jwt = JWTManager(app)
 #config of db is done here
 app.config["MONGO_URI"] = MONGODB_ATLAS_URI
 mongo = PyMongo(app) 
-
 
 #models to be used
 clothingModel = YOLO(r'C:\Users\Ammna\Documents\GitHub\FYP-BACKEND\weights\clothes_new.pt')
@@ -176,8 +174,11 @@ def getCategoryWiseLabels(category):
       for product in products:
         for label in product["labels"]:
           if label not in labels:
-            labels.append(label)
-      return jsonify({"Category labels":labels})
+            labels.append({"name":label})
+      return jsonify({
+        "title":category,
+        "items": labels
+      })
   except Exception as e:
     return jsonify({"Message":str(e)})
   
@@ -248,6 +249,20 @@ def productsDetect():
         last_elements_within_jewelry = [int(element[-1]) for element in inferences2]
         jewelry = JewelryClasses.getClassLabels(last_elements_within_jewelry)
         
+        totalClasses = jewelry + cloth + shoes
+        
+        if(len(totalClasses)==0):
+          allItems = mongo.db.Products.find()
+          data = resultsStringIdConverter(allItems)
+          result = [
+            {
+              "detection": "no detection",
+              "products": data["products"]
+            } 
+          ]
+          return jsonify(result)
+          
+        
         products_ref = mongo.db.Products.find({"labels":{ "$in": shoes}})
         products_list_shoes = cursorConverter(cursor=products_ref)
         finalResultSorted_shoes = embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList= products_list_shoes)
@@ -260,10 +275,29 @@ def productsDetect():
         products_list_jewelry = cursorConverter(cursor=products_jewelry)
         finalResultSorted_jewelry= embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_jewelry)
         
-        finalResultSorted = finalResultSorted_cloth + finalResultSorted_jewelry + finalResultSorted_shoes
+        # print(finalResultSorted_cloth)
+        # print(finalResultSorted_jewelry)
+        # print(finalResultSorted_shoes)
         
+        finalResultSorted = finalResultSorted_cloth + finalResultSorted_jewelry + finalResultSorted_shoes
         data = resultsStringIdConverter(finalResultSorted)
-        return jsonify(data)
+        
+        prods = data["products"]
+        finalArray = []
+        
+        for classItem in totalClasses:
+          arr = []
+          for product in prods:
+            if classItem in product["labels"]:
+              arr.append(product)
+          finalSet = {
+            "detection":classItem,
+            "products":arr
+          }
+          finalArray.append(finalSet)
+          
+        return jsonify({"products":finalArray})
+      
     except Exception as e:
       return jsonify({"message : ", str(e)})
       
@@ -421,3 +455,5 @@ def resetPassword(email):
   except Exception as e:
     return jsonify({"Error message : ": str(e)})
   
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
