@@ -275,10 +275,6 @@ def productsDetect():
         products_list_jewelry = cursorConverter(cursor=products_jewelry)
         finalResultSorted_jewelry= embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_jewelry)
         
-        # print(finalResultSorted_cloth)
-        # print(finalResultSorted_jewelry)
-        # print(finalResultSorted_shoes)
-        
         finalResultSorted = finalResultSorted_cloth + finalResultSorted_jewelry + finalResultSorted_shoes
         data = resultsStringIdConverter(finalResultSorted)
         
