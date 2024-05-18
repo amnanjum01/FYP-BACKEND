@@ -249,8 +249,10 @@ def productsDetect():
         last_elements_within_jewelry = [int(element[-1]) for element in inferences2]
         jewelry = JewelryClasses.getClassLabels(last_elements_within_jewelry)
         
-        totalClasses = jewelry + cloth + shoes
+        preliminaryList = set(jewelry + cloth + shoes)
+        totalClasses = list(preliminaryList)
         
+        print(totalClasses)
         if(len(totalClasses)==0):
           allItems = mongo.db.Products.find()
           data = resultsStringIdConverter(allItems)
@@ -260,7 +262,7 @@ def productsDetect():
               "products": data["products"]
             } 
           ]
-          return jsonify(result)
+          return jsonify({"products": result})
           
         
         products_ref = mongo.db.Products.find({"labels":{ "$in": shoes}})
