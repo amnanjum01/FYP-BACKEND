@@ -14,4 +14,4 @@ class JewelryClasses(ModelClasses):
         classNames = []
         for classCode in classCodes:
             classNames.append(cls.classLabelsDict[classCode])
-        return classNames
+        return classNames   

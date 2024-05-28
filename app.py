@@ -169,12 +169,17 @@ def updateProductById(id):
 def getCategoryWiseLabels(category):
   try:
     if request.method == "GET":
-      products = mongo.db.Products.find({"category":category})
+      products = mongo.db.Products.find({"category": category})
       labels = []
+      label_set = set()  # Use a set to track unique labels
+
       for product in products:
-        for label in product["labels"]:
-          if label not in labels:
-            labels.append({"name":label})
+          for label in product["labels"]:
+              if label not in label_set:
+                  labels.append({"name": label})
+                  label_set.add(label)  # Add the label to the set
+              else:
+                  print("Already in there!")
       return jsonify({
         "title":category,
         "items": labels
@@ -234,11 +239,11 @@ def productsDetect():
         imageEmbedding = ibed.to_embeddings(imageInput2)
         arr_list = imageEmbedding.tolist() 
         predictionResultClothes = clothingModel(imageInput2)
-        predictionResultJewelry = jewerlyModel(imageInput2)
+        # predictionResultJewelry = jewerlyModel(imageInput2)
         predictionResultShoes = shoeModel(imageInput2)
         inferences = predictionResultShoes[0].boxes.data.numpy()
         inferences1 = predictionResultClothes[0].boxes.data.numpy()
-        inferences2 = predictionResultJewelry[0].boxes.data.numpy()
+        # inferences2 = predictionResultJewelry[0].boxes.data.numpy()
         
         last_elements_within = [int(element[-1]) for element in inferences]
         shoes = ShoesClasses.getClassLabels(last_elements_within)
@@ -246,10 +251,11 @@ def productsDetect():
         last_elements_within_clothes = [int(element[-1]) for element in inferences1]
         cloth = ClothClasses.getClassLabels(last_elements_within_clothes)
         
-        last_elements_within_jewelry = [int(element[-1]) for element in inferences2]
-        jewelry = JewelryClasses.getClassLabels(last_elements_within_jewelry)
+        # last_elements_within_jewelry = [int(element[-1]) for element in inferences2]
+        # jewelry = JewelryClasses.getClassLabels(last_elements_within_jewelry)
         
-        preliminaryList = set(jewelry + cloth + shoes)
+        # preliminaryList = set(jewelry + cloth + shoes)
+        preliminaryList = set(cloth + shoes)
         totalClasses = list(preliminaryList)
         
         print(totalClasses)
@@ -273,11 +279,12 @@ def productsDetect():
         products_list_cloth = cursorConverter(cursor=products_cloth)
         finalResultSorted_cloth = embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_cloth)
         
-        products_jewelry = mongo.db.Products.find({"labels":{ "$in": jewelry}})
-        products_list_jewelry = cursorConverter(cursor=products_jewelry)
-        finalResultSorted_jewelry= embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_jewelry)
+        # products_jewelry = mongo.db.Products.find({"labels":{ "$in": jewelry}})
+        # products_list_jewelry = cursorConverter(cursor=products_jewelry)
+        # finalResultSorted_jewelry= embeddingComparerAndSort(imageEmbeddings=imageEmbedding, productList=products_list_jewelry)
         
-        finalResultSorted = finalResultSorted_cloth + finalResultSorted_jewelry + finalResultSorted_shoes
+        # finalResultSorted = finalResultSorted_cloth + finalResultSorted_jewelry + finalResultSorted_shoes
+        finalResultSorted = finalResultSorted_cloth +  finalResultSorted_shoes
         data = resultsStringIdConverter(finalResultSorted)
         
         prods = data["products"]
