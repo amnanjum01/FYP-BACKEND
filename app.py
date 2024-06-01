@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_mail import Mail, Message
@@ -12,7 +12,7 @@ from numpy.linalg import norm
 from classificationClasses.ClothClasses import ClothClasses
 from classificationClasses.JewelryClasses import JewelryClasses
 from classificationClasses.ShoesClasses import ShoesClasses
-
+import requests
 #date time
 from datetime import datetime
 
@@ -459,6 +459,20 @@ def resetPassword(email):
         return jsonify({"Message":"Password updated."})
   except Exception as e:
     return jsonify({"Error message : ": str(e)})
+  
+@app.route('/fetch-image', methods=['POST'])
+def fetch_image():
+  image_url = request.get_json('imageUrl') 
+  print(image_url)
+  try:
+    response = requests.get(image_url["imageUrl"], stream=True)  # Use requests for fetching with streaming
+    response.raise_for_status()  # Raise an exception for non-2xx status codes
+    content_type = response.headers['Content-Type']  # Get content type from response
+
+    return Response(response.iter_content(1024), content_type=content_type)
+  except requests.exceptions.RequestException as error:
+    print(f"Error fetching image: {error}")
+    return Response(status=500, response="Error fetching image")
   
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
